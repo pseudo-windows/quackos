@@ -295,13 +295,7 @@ MI_IS_MAPPED_PTE(PMMPTE PointerPte)
             (PointerPte->u.Hard.PageFrameNumber != 0));
 }
 
-FORCEINLINE
-VOID
-MmInitGlobalKernelPageDirectory(VOID)
-{
-    /* Nothing to do */
-}
-
+CODE_SEG("INIT")
 FORCEINLINE
 BOOLEAN
 MiIsPdeForAddressValid(PVOID Address)

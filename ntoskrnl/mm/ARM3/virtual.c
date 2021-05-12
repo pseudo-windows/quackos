@@ -1356,8 +1356,10 @@ MmFlushVirtualMemory(IN PEPROCESS Process,
                      OUT PIO_STATUS_BLOCK IoStatusBlock)
 {
     PAGED_CODE();
-    /* For now we call the old Mm */
-    return MmRosFlushVirtualMemory(Process, BaseAddress, RegionSize, IoStatusBlock);
+
+    UNIMPLEMENTED;
+
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 ULONG
@@ -5277,7 +5279,7 @@ NtFreeVirtualMemory(IN HANDLE ProcessHandle,
          (Vad->u.VadFlags.VadType != VadRotatePhysical)) ||
         (Vad->u.VadFlags.VadType == VadDevicePhysicalMemory))
     {
-        DPRINT1("Attempt to free section memory\n");
+        DPRINT("Attempt to free section memory\n");
         Status = STATUS_UNABLE_TO_DELETE_SECTION;
         goto FailPath;
     }

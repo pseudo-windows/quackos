@@ -187,6 +187,7 @@ extern PACL SePublicDefaultUnrestrictedDacl;
 extern PACL SePublicOpenDacl;
 extern PACL SePublicOpenUnrestrictedDacl;
 extern PACL SeUnrestrictedDacl;
+extern PACL SeSystemAnonymousLogonDacl;
 
 /* SDs */
 extern PSECURITY_DESCRIPTOR SePublicDefaultSd;
@@ -195,6 +196,11 @@ extern PSECURITY_DESCRIPTOR SePublicOpenSd;
 extern PSECURITY_DESCRIPTOR SePublicOpenUnrestrictedSd;
 extern PSECURITY_DESCRIPTOR SeSystemDefaultSd;
 extern PSECURITY_DESCRIPTOR SeUnrestrictedSd;
+extern PSECURITY_DESCRIPTOR SeSystemAnonymousLogonSd;
+
+/* Anonymous Logon Tokens */
+extern PTOKEN SeAnonymousLogonToken;
+extern PTOKEN SeAnonymousLogonTokenNoEveryone;
 
 
 #define SepAcquireTokenLockExclusive(Token)                                    \
@@ -242,23 +248,35 @@ SepSidInTokenEx(
     IN BOOLEAN Restricted
 );
 
+BOOLEAN
+NTAPI
+SeTokenCanImpersonate(
+    _In_ PTOKEN ProcessToken,
+    _In_ PTOKEN TokenToImpersonate,
+    _In_ SECURITY_IMPERSONATION_LEVEL ImpersonationLevel);
+
 /* Functions */
+CODE_SEG("INIT")
 BOOLEAN
 NTAPI
 SeInitSystem(VOID);
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 SepInitPrivileges(VOID);
 
+CODE_SEG("INIT")
 BOOLEAN
 NTAPI
 SepInitSecurityIDs(VOID);
 
+CODE_SEG("INIT")
 BOOLEAN
 NTAPI
 SepInitDACLs(VOID);
 
+CODE_SEG("INIT")
 BOOLEAN
 NTAPI
 SepInitSDs(VOID);
@@ -325,13 +343,23 @@ SepCreateImpersonationTokenDacl(
     _Out_ PACL* Dacl
 );
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 SepInitializeTokenImplementation(VOID);
 
+CODE_SEG("INIT")
 PTOKEN
 NTAPI
 SepCreateSystemProcessToken(VOID);
+
+CODE_SEG("INIT")
+PTOKEN
+SepCreateSystemAnonymousLogonToken(VOID);
+
+CODE_SEG("INIT")
+PTOKEN
+SepCreateSystemAnonymousLogonTokenNoEveryone(VOID);
 
 BOOLEAN
 NTAPI
@@ -560,6 +588,15 @@ SeCopyClientToken(
     IN KPROCESSOR_MODE PreviousMode,
     OUT PACCESS_TOKEN* NewToken
 );
+
+NTSTATUS
+NTAPI
+SepRegQueryHelper(
+    _In_ PCWSTR KeyName,
+    _In_ PCWSTR ValueName,
+    _In_ ULONG ValueType,
+    _In_ ULONG DataLength,
+    _Out_ PVOID ValueData);
 
 VOID NTAPI
 SeQuerySecurityAccessMask(IN SECURITY_INFORMATION SecurityInformation,

@@ -4,6 +4,11 @@
 
 #include "arch/ke.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* INTERNAL KERNEL TYPES ****************************************************/
 
 typedef struct _WOW64_PROCESS
@@ -142,7 +147,6 @@ extern ULONG KeTimeIncrement;
 extern ULONG KeTimeAdjustment;
 extern BOOLEAN KiTimeAdjustmentEnabled;
 extern LONG KiTickOffset;
-extern ULONG_PTR KiBugCheckData[5];
 extern ULONG KiFreezeFlag;
 extern ULONG KiDPCTimeout;
 extern PGDI_BATCHFLUSH_ROUTINE KeGdiFlushUserBatch;
@@ -724,10 +728,12 @@ KeQueryValuesProcess(IN PKPROCESS Process,
 
 /* INITIALIZATION FUNCTIONS *************************************************/
 
+CODE_SEG("INIT")
 BOOLEAN
 NTAPI
 KeInitSystem(VOID);
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KeInitExceptions(VOID);
@@ -736,10 +742,13 @@ VOID
 NTAPI
 KeInitInterrupts(VOID);
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiInitializeBugCheck(VOID);
 
+DECLSPEC_NORETURN
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiSystemStartup(
@@ -900,6 +909,7 @@ KiChainedDispatch(
     IN PKINTERRUPT Interrupt
 );
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiInitializeMachineType(
@@ -917,6 +927,7 @@ KiSetupStackAndInitializeKernel(
     IN PLOADER_PARAMETER_BLOCK LoaderBlock
 );
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiInitSpinLocks(
@@ -924,6 +935,7 @@ KiInitSpinLocks(
     IN CCHAR Number
 );
 
+CODE_SEG("INIT")
 LARGE_INTEGER
 NTAPI
 KiComputeReciprocal(
@@ -931,6 +943,7 @@ KiComputeReciprocal(
     OUT PUCHAR Shift
 );
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiInitSystem(
@@ -959,6 +972,7 @@ KiCallbackReturn(
     IN NTSTATUS Status
 );
 
+CODE_SEG("INIT")
 VOID
 NTAPI
 KiInitMachineDependent(VOID);
@@ -1015,8 +1029,8 @@ KiQuantumEnd(
     VOID
 );
 
+DECLSPEC_NORETURN
 VOID
-FASTCALL
 KiIdleLoop(
     VOID
 );
@@ -1048,5 +1062,9 @@ KeBugCheckUnicodeToAnsi(
     OUT PCHAR Ansi,
     IN ULONG Length
 );
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #include "ke_x.h"

@@ -7,6 +7,13 @@ endif()
 
 include(CMakeDependentOption)
 
+# CMAKE_CROSSCOMPILING and MSVC_IDE are not set until project() is called, so let's test this instead
+if ((DEFINED CMAKE_TOOLCHAIN_FILE) AND (CMAKE_GENERATOR MATCHES "Visual Studio.*"))
+# Do not use MSVC_RUNTIME_LIBRARY target property. We use our own flags instead
+message(WARNING "Setting policy CMP0091 to OLD behaviour")
+cmake_policy(SET CMP0091 OLD)
+endif()
+
 project(REACTOS)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -21,8 +28,9 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 #set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
 
+# check that the ARCH (target architecture) variable is defined
 if(NOT ARCH)
-    set(ARCH i386)
+    message(FATAL_ERROR "Target architecture (ARCH) is not defined. Please, choose one of: i386, amd64, arm")
 endif()
 # Now the ARCH variable will be in lowercase.
 # It is needed because STREQUAL comparison
@@ -31,6 +39,9 @@ endif()
 # for more information.
 string(TOLOWER ${ARCH} ARCH)
 
+# set possible values for cmake GUI
+set_property(CACHE ARCH PROPERTY STRINGS "i386" "amd64" "arm")
+
 # Alternative WinNT-compatible architecture string
 if(ARCH STREQUAL "i386")
     set(WINARCH "x86")
@@ -38,17 +49,21 @@ else()
     set(WINARCH ${ARCH})
 endif()
 
+# set CMAKE_BUILD_TYPE if not set
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to Debug as none was specified.")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE
+        STRING "Choose the type of build." FORCE)
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+                 "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 # Versioning
 include(sdk/include/reactos/version.cmake)
 
 # Compile options
-if(ARCH STREQUAL "i386")
-    include(sdk/cmake/config.cmake)
-elseif(ARCH STREQUAL "amd64")
-    include(sdk/cmake/config-amd64.cmake)
-elseif(ARCH STREQUAL "arm")
-    include(sdk/cmake/config-arm.cmake)
-endif()
+include(sdk/cmake/config.cmake)
 
 # Compiler flags handling
 include(sdk/cmake/compilerflags.cmake)
@@ -117,8 +132,21 @@ else()
     # We don't need CMake importlib handling.
     unset(CMAKE_IMPORT_LIBRARY_SUFFIX)
 
-    # Print build type
-    message("-- Build Type: ${CMAKE_BUILD_TYPE}")
+    # Print build type(s)
+    if(CMAKE_CONFIGURATION_TYPES)
+        # Multi-config generators, like Visual Studio (MSBuild).
+        message("-- Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
+    else()
+        # Single-configuration generators, like Ninja.
+        message("-- Build type: ${CMAKE_BUILD_TYPE}")
+    endif()
+
+    # Always add /MT in VS CMAKE_GENERATOR and define _SBCS otherwise VS thinks it's a multi-byte or whatever project
+    if (MSVC_IDE)
+        add_compile_options("/MT")
+        add_compile_definitions(_SBCS)
+    endif()
+
 
     # adjust the default behaviour of the FIND_XXX() commands:
     # search headers and libraries in the target environment, search
@@ -193,7 +221,11 @@ Enable this if the module uses typeid or dynamic_cast. You will probably need to
             add_definitions(-DSARCH_PC98)
         endif()
     elseif(ARCH STREQUAL "amd64")
-        add_definitions(-D_M_AMD64 -D_AMD64_ -D__x86_64__ -D_WIN64)
+        # clang-cl defines this one for itself
+        if (NOT (MSVC AND CMAKE_C_COMPILER_ID STREQUAL "Clang"))
+            add_compile_definitions(_M_AMD64)
+        endif()
+        add_definitions(-D_AMD64_ -D__x86_64__ -D_WIN64)
     elseif(ARCH STREQUAL "arm")
         # _M_ARM is already defined by toolchain
         add_definitions(-D_ARM_ -D__arm__ -DWIN32)
@@ -213,7 +245,11 @@ Enable this if the module uses typeid or dynamic_cast. You will probably need to
     endif()
 
     # Activate support for assembly source files
-    enable_language(ASM)
+    if (MSVC)
+        enable_language(ASM_MASM)
+    else()
+        enable_language(ASM)
+    endif()
 
     # Activate language support for resource files
     enable_language(RC)
